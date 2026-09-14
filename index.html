@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TourPlanner AI | Intelligent Trip Planning</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+    </script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="font-sans antialiased bg-slate-50 text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ====================== SCREEN 1: WELCOME ====================== -->
+    <section id="screen-welcome" class="fixed inset-0 z-50 flex flex-col items-center justify-center welcome-bg overflow-hidden">
+        <!-- Animated floating particles -->
+        <div class="particles" id="particles"></div>
+
+        <!-- Floating destination cards (decorative) -->
+        <div class="floating-card fc1">🗼 Paris, France</div>
+        <div class="floating-card fc2">⛩️ Kyoto, Japan</div>
+        <div class="floating-card fc3">🏛️ Rome, Italy</div>
+        <div class="floating-card fc4">🕌 Istanbul, Turkey</div>
+        <div class="floating-card fc5">🗽 New York, USA</div>
+        <div class="floating-card fc6">🏯 New Delhi, India</div>
+
+        <!-- Center content -->
+        <div class="relative z-10 text-center text-white px-4">
+            <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-sm font-medium mb-6 fade-in-up">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Live Data • Real Places • Graph Visualization
+            </div>
+            <h1 class="text-6xl md:text-8xl font-black mb-4 fade-in-up delay-1 leading-tight">
+                Plan Your<br><span class="text-gradient">Perfect Trip</span>
+            </h1>
+            <p class="text-xl md:text-2xl font-light opacity-85 mb-10 fade-in-up delay-2 max-w-2xl mx-auto">
+                AI-powered itinerary builder with real-time Wikipedia data &amp; interactive graph analysis
+            </p>
+            <button id="btn-start" class="welcome-cta fade-in-up delay-3">
+                <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Start Planning
+                <span class="ml-2">→</span>
+            </button>
+            <p class="text-sm opacity-50 mt-6 fade-in-up delay-3">No API keys required · 100% Free</p>
+        </div>
+
+        <!-- Bottom credit -->
+        <div class="absolute bottom-6 text-white/50 text-sm z-10">
+            Made by <span class="text-white/80 font-semibold">Avik</span> · Manipal University Jaipur
+        </div>
+    </section>
+
+    <!-- ====================== SCREEN 2: WIZARD ====================== -->
+    <section id="screen-wizard" class="hidden fixed inset-0 z-40 flex items-center justify-center wizard-bg p-4">
+        <div class="wizard-card w-full max-w-xl">
+
+            <!-- Step Indicators -->
+            <div class="flex items-center justify-between mb-8">
+                <div class="step-indicator active" data-step="1">
+                    <div class="step-circle"><i class="fa-solid fa-earth-asia"></i></div>
+                    <span>Destination</span>
+                </div>
+                <div class="step-line" id="line-1-2"></div>
+                <div class="step-indicator" data-step="2">
+                    <div class="step-circle"><i class="fa-solid fa-heart"></i></div>
+                    <span>Interests</span>
+                </div>
+                <div class="step-line" id="line-2-3"></div>
+                <div class="step-indicator" data-step="3">
+                    <div class="step-circle"><i class="fa-solid fa-sliders"></i></div>
+                    <span>Details</span>
+                </div>
+            </div>
+
+            <!-- STEP 1 -->
+            <div id="step-1" class="wizard-step">
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Where are you headed?</h2>
+                <p class="text-gray-500 text-sm mb-6">Start by choosing your destination country and city.</p>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-flag text-indigo-500 mr-2"></i>Country</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="input-country" list="country-list"
+                            placeholder="Search for a country..." class="fancy-input" autocomplete="off">
+                        <datalist id="country-list"></datalist>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-city text-indigo-500 mr-2"></i>City / Region</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="input-city"
+                            placeholder="e.g., Paris, Tokyo, New Delhi" class="fancy-input">
+                    </div>
+                </div>
+
+                <button id="btn-next-1" class="btn-primary w-full mt-2">
+                    Continue <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="step-2" class="wizard-step hidden">
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">What excites you?</h2>
+                <p class="text-gray-500 text-sm mb-6">Pick all the categories you enjoy — we'll build your trip around them.</p>
+
+                <div class="interests-grid">
+                    <label class="interest-chip">
+                        <input type="checkbox" value="museum" checked>
+                        <div class="chip-content"><span class="text-2xl">🏛️</span><span>Museums & Art</span></div>
+                    </label>
+                    <label class="interest-chip">
+                        <input type="checkbox" value="park" checked>
+                        <div class="chip-content"><span class="text-2xl">🌳</span><span>Parks & Nature</span></div>
+                    </label>
+                    <label class="interest-chip">
+                        <input type="checkbox" value="historic" checked>
+                        <div class="chip-content"><span class="text-2xl">🏰</span><span>Historic Sites</span></div>
+                    </label>
+                    <label class="interest-chip">
+                        <input type="checkbox" value="restaurant" checked>
+                        <div class="chip-content"><span class="text-2xl">🍽️</span><span>Food & Dining</span></div>
+                    </label>
+                    <label class="interest-chip">
+                        <input type="checkbox" value="shopping">
+                        <div class="chip-content"><span class="text-2xl">🛍️</span><span>Shopping</span></div>
+                    </label>
+                    <label class="interest-chip">
+                        <input type="checkbox" value="viewpoint">
+                        <div class="chip-content"><span class="text-2xl">📸</span><span>Viewpoints</span></div>
+                    </label>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button id="btn-prev-2" class="btn-secondary flex-1">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Back
+                    </button>
+                    <button id="btn-next-2" class="btn-primary flex-1">
+                        Continue <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="step-3" class="wizard-step hidden">
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Trip Details</h2>
+                <p class="text-gray-500 text-sm mb-6">Tell us how long you're staying and where you'll be based.</p>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-calendar-days text-indigo-500 mr-2"></i>Trip Duration</label>
+                    <div class="flex items-center gap-4">
+                        <input type="range" id="input-days-range" min="1" max="7" value="3" class="flex-grow accent-indigo-600">
+                        <div class="day-badge"><span id="days-display">3</span> days</div>
+                    </div>
+                    <input type="hidden" id="input-days" value="3">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-hotel text-indigo-500 mr-2"></i>Hotel / Base Location <span class="text-xs text-gray-400 font-normal">(Optional)</span></label>
+                    <div class="input-wrapper">
+                        <input type="text" id="input-hotel"
+                            placeholder="e.g., Connaught Place, City Center" class="fancy-input">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave blank — we'll use the city center as your base.</p>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button id="btn-prev-3" class="btn-secondary flex-1">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Back
+                    </button>
+                    <button id="btn-generate" class="btn-generate flex-1">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Generate My Trip
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ====================== SCREEN 3: LOADING ====================== -->
+    <section id="screen-loading" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-900">
+        <!-- Animated rings -->
+        <div class="loading-rings mb-10">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
+            <div class="ring-icon"><i class="fa-solid fa-map-location-dot text-white text-2xl"></i></div>
+        </div>
+
+        <h2 id="loading-title" class="text-2xl font-bold text-white mb-2">Initializing...</h2>
+        <p id="loading-subtitle" class="text-slate-400 text-sm mb-10">Please wait while we fetch your data</p>
+
+        <!-- Step checklist -->
+        <div class="loading-steps">
+            <div class="load-step" id="lstep-1">
+                <div class="ls-icon pending"><i class="fa-regular fa-circle-dot"></i></div>
+                <span>Locating destination via GPS coordinates</span>
+            </div>
+            <div class="load-step" id="lstep-2">
+                <div class="ls-icon pending"><i class="fa-regular fa-circle-dot"></i></div>
+                <span>Fetching real places from Wikipedia</span>
+            </div>
+            <div class="load-step" id="lstep-3">
+                <div class="ls-icon pending"><i class="fa-regular fa-circle-dot"></i></div>
+                <span>Building route graph & clustering</span>
+            </div>
+            <div class="load-step" id="lstep-4">
+                <div class="ls-icon pending"><i class="fa-regular fa-circle-dot"></i></div>
+                <span>Rendering visualizations</span>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="w-64 bg-slate-700 rounded-full h-1.5 mt-10">
+            <div id="loading-progress" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-700" style="width:0%"></div>
+        </div>
+    </section>
+
+    <!-- ====================== SCREEN 4: DASHBOARD ====================== -->
+    <section id="screen-dashboard" class="hidden fixed inset-0 z-30 flex flex-col">
+
+        <!-- Dashboard Topbar -->
+        <header class="dash-topbar shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                    <i class="fa-solid fa-map-location-dot text-white text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-gray-900 leading-tight" id="dash-title">Trip to Destination</h1>
+                    <p class="text-xs text-gray-500" id="dash-meta">Generating plan...</p>
+                </div>
+            </div>
+
+            <!-- Stats pills -->
+            <div class="hidden md:flex items-center gap-3 text-sm" id="stats-pills">
+                <div class="stat-pill"><i class="fa-solid fa-location-dot text-indigo-500"></i> <span id="stat-places">0</span> Places</div>
+                <div class="stat-pill"><i class="fa-solid fa-calendar text-purple-500"></i> <span id="stat-days">0</span> Days</div>
+                <div class="stat-pill"><i class="fa-solid fa-tag text-emerald-500"></i> <span id="stat-cats">0</span> Categories</div>
+                <div class="stat-pill"><i class="fa-solid fa-route text-amber-500"></i> <span id="stat-km">0</span> km</div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="btn-darkmode" class="btn-sm-secondary" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon mr-1" id="darkmode-icon"></i> Dark
+                </button>
+                <button id="btn-export" class="btn-sm-secondary" title="Print / Save Itinerary">
+                    <i class="fa-solid fa-file-arrow-down mr-1"></i> Export
+                </button>
+                <button id="btn-restart" class="btn-sm-primary">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> New Trip
+                </button>
+            </div>
+        </header>
+
+        <!-- Main body -->
+        <div class="flex flex-grow min-h-0">
+
+            <!-- LEFT: Itinerary Sidebar -->
+            <aside class="itinerary-sidebar flex flex-col">
+                <div class="p-3 border-b border-gray-100 flex gap-2 overflow-x-auto shrink-0" id="day-tabs"></div>
+                <div class="flex-grow overflow-y-auto p-3" id="itinerary-container"></div>
+
+                <!-- Bottom actions -->
+                <div class="p-3 border-t border-gray-100 flex gap-2 shrink-0">
+                    <button id="btn-maps-all" class="btn-maps flex-1">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        Open Full Route
+                    </button>
+                </div>
+            </aside>
+
+            <!-- RIGHT: Visualizations -->
+            <div class="flex-grow flex flex-col min-w-0">
+
+                <!-- Viz Tab Bar -->
+                <div class="viz-tabbar shrink-0">
+                    <button class="viz-tab active" data-target="view-map">
+                        <i class="fa-solid fa-map-location-dot mr-1.5"></i> GIS Map
+                    </button>
+                    <button class="viz-tab" data-target="view-network">
+                        <i class="fa-solid fa-circle-nodes mr-1.5"></i> Route Network
+                    </button>
+                    <button class="viz-tab" data-target="view-dendrogram">
+                        <i class="fa-solid fa-sitemap mr-1.5"></i> Dendrogram
+                    </button>
+                    <button class="viz-tab" data-target="view-radial">
+                        <i class="fa-solid fa-circle-dot mr-1.5"></i> Radial Tree
+                    </button>
+                    <button class="viz-tab" data-target="view-timeline">
+                        <i class="fa-solid fa-calendar-days mr-1.5"></i> Timeline
+                    </button>
+                    <button class="viz-tab" data-target="view-treemap">
+                        <i class="fa-solid fa-border-all mr-1.5"></i> Treemap
+                    </button>
+                    <button class="viz-tab" data-target="view-arc">
+                        <i class="fa-solid fa-bezier-curve mr-1.5"></i> Arc Diagram
+                    </button>
+                    <button class="viz-tab" data-target="view-cluster">
+                        <i class="fa-solid fa-braille mr-1.5"></i> Bubble Cluster
+                    </button>
+                    <button class="viz-tab" data-target="view-bar">
+                        <i class="fa-solid fa-chart-column mr-1.5"></i> Bar Graph
+                    </button>
+                    <button class="viz-tab" data-target="view-line">
+                        <i class="fa-solid fa-chart-line mr-1.5"></i> Line Graph
+                    </button>
+                    <button class="viz-tab" data-target="view-stats">
+                        <i class="fa-solid fa-chart-bar mr-1.5"></i> Stats &amp; Analysis
+                    </button>
+                    <!-- Explainer badge -->
+                    <div class="ml-auto hidden md:flex items-center pr-3">
+                        <div class="explainer-badge" id="viz-explainer-badge">
+                            <i class="fa-solid fa-circle-info text-indigo-400 mr-1.5"></i>
+                            <span id="viz-explainer-text">Drag markers · Click for info · Scroll to zoom</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Viz Views -->
+                <div class="flex-grow relative">
+                    <div id="view-map" class="viz-view absolute inset-0">
+                        <div id="map-day-filter" class="absolute top-3 left-14 z-[600] flex gap-1.5" style="display:none;"></div>
+                    </div>
+                    <div id="view-network" class="viz-view absolute inset-0 hidden"></div>
+                    <div id="view-dendrogram" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;background:#f8fafc;"></div>
+                    <div id="view-radial" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;background:#f8fafc;"></div>
+                    <div id="view-timeline" class="viz-view absolute inset-0 hidden overflow-y-auto" style="background:#f8fafc;"></div>
+                    <div id="view-treemap" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;"></div>
+                    <div id="view-arc" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;background:#f8fafc;"></div>
+                    <div id="view-cluster" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;background:#f8fafc;"></div>
+                    <div id="view-bar" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;background:#fff;"></div>
+                    <div id="view-line" class="viz-view absolute inset-0 hidden" style="position:relative;overflow:hidden;background:#fff;"></div>
+                    <div id="view-stats" class="viz-view absolute inset-0 hidden overflow-y-auto bg-white p-6">
+                        <div id="stats-content" class="max-w-3xl mx-auto"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bottom credit bar -->
+        <footer class="bg-slate-900 text-slate-500 py-2 text-center text-xs shrink-0 z-50">
+            Made by <span class="text-slate-300 font-semibold">Avik</span>, student at
+            <span class="text-slate-300">Manipal University Jaipur</span> &nbsp;|&nbsp; Graph Visualization Project
+        </footer>
+    </section>
+
+    <!-- Map Legend Overlay (inside map view) -->
+    <div id="map-legend" class="hidden absolute bottom-12 right-4 z-[500] bg-white rounded-xl shadow-xl border border-gray-200 p-3 text-xs w-40">
+        <p class="font-bold text-gray-700 mb-2 text-xs uppercase tracking-wide">Legend</p>
+        <div id="legend-items"></div>
+        <div class="mt-2 pt-2 border-t border-gray-100">
+            <div class="flex items-center gap-2 text-gray-500"><div class="w-6 h-0.5 border-t-2 border-dashed border-indigo-400"></div> Walking</div>
+            <div class="flex items-center gap-2 text-gray-500 mt-1"><div class="w-6 h-0.5 border-t-2 border-indigo-400"></div> Transit</div>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/planner.js"></script>
+    <script src="js/visualizations.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
